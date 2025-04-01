@@ -1,0 +1,15 @@
+<svg width="6000" height="6000" xmlns="http://www.w3.org/2000/svg">
+    <g>
+        <circle cx="3000" cy="3000" r="2800" fill="#000000"/>
+        <text 
+            x="3000" 
+            y="3000" 
+            fill="#FFFFFF" 
+            font-family="Devanagari MT, sans-serif"
+            font-size="4500"
+            text-anchor="middle"
+            dominant-baseline="middle">
+            भ
+        </text>
+    </g>
+</svg>

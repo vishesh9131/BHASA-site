@@ -1,0 +1,14 @@
+<svg width="6000" height="6000" xmlns="http://www.w3.org/2000/svg">
+    <g>
+        <text 
+            x="3000" 
+            y="3000" 
+            fill="#FFFFFF" 
+            font-family="'Noto Sans Devanagari', Arial, sans-serif"
+            font-size="4500"
+            text-anchor="middle"
+            dominant-baseline="middle">
+            भ
+        </text>
+    </g>
+</svg>
