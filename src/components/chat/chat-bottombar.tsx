@@ -22,6 +22,15 @@ import useSpeechToText from "@/hooks/useSpeechRecognition";
 import MultiImagePicker from "../image-embedder";
 import { Models } from "@/lib/models";
 import { ChatInput } from "../ui/chat/chat-input";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Command } from "lucide-react";
 
 interface MergedProps extends ChatProps {
   files: File[] | undefined;
@@ -48,6 +57,29 @@ export default function ChatBottombar({
   const selectedModel = useChatStore((state) => state.selectedModel);
 
   const [inputFocused, setInputFocused] = useState(false);
+  const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const [commands] = useState([
+    { id: 'hindi', label: 'Hindi', description: 'Translate response to Hindi', suffix: 'translate in hindi' },
+    { id: 'logic', label: 'Logic', description: 'Provide logical analysis', suffix: 'analyze this logically' },
+  ]);
+  const [commandPosition, setCommandPosition] = useState({ x: 0, y: 0 });
+  const [selectedCommand, setSelectedCommand] = useState<string | null>(null);
+
+  const [windowHeight, setWindowHeight] = useState(0);
+
+  useEffect(() => {
+    // Only run on the client side
+    setWindowHeight(window.innerHeight);
+    
+    const handleResize = () => {
+      setWindowHeight(window.innerHeight);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  console.log("Current model ID:", selectedModel?.name);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -82,6 +114,68 @@ export default function ChatBottombar({
     setInputFocused(false);
   };
 
+  const handleCommandSelect = (commandId: string) => {
+    const command = commands.find(cmd => cmd.id === commandId);
+    if (command) {
+      setSelectedCommand(command.suffix);
+      setInput("");
+    }
+    setCommandMenuOpen(false);
+  };
+
+  const handleInputChangeWithCommands = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    handleInputChange(e);
+    
+    if (value === '/') {
+      const textAreaRect = e.target.getBoundingClientRect();
+      const lineHeight = parseInt(getComputedStyle(e.target).lineHeight) || 20;
+      
+      const cursorX = textAreaRect.left + 20; 
+      
+      const cursorY = textAreaRect.top + 10;
+      
+      setCommandPosition({ x: cursorX, y: cursorY });
+      setCommandMenuOpen(true);
+    }
+    
+    if (commandMenuOpen && !value.startsWith('/')) {
+      setCommandMenuOpen(false);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (isLoading) return;
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+      return;
+    }
+    
+    if (e.key === "Escape" && commandMenuOpen) {
+      setCommandMenuOpen(false);
+      e.preventDefault();
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    if (selectedCommand) {
+      const originalInput = input;
+      const finalInput = `${originalInput} ${selectedCommand}`;
+      
+      setInput(finalInput);
+      
+      setTimeout(() => {
+        handleSubmit(e);
+        setSelectedCommand(null);
+      }, 0);
+    } else {
+      handleSubmit(e);
+    }
+  };
+
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
@@ -94,30 +188,66 @@ export default function ChatBottombar({
     }
   }, [isLoading]);
 
-
+  useEffect(() => {
+    // Debug model information
+    console.log("Selected model:", selectedModel);
+    
+    // If model is undefined, attempt to use a fallback
+    if (!selectedModel || !selectedModel.name) {
+      console.warn("Model undefined or missing ID, attempting to use default");
+      // You might want to set a default model here if needed
+    }
+  }, [selectedModel]);
 
   return (
     <div className="px-4 pb-7 flex justify-between w-full items-center relative ">
       <AnimatePresence initial={false}>
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleFormSubmit}
           className="w-full items-center flex flex-col  bg-accent dark:bg-card rounded-lg "
         >
-          <ChatInput
-            autoComplete="off"
-            value={isListening ? (transcript.length ? transcript : "") : input}
-            ref={inputRef}
-            onKeyDown={handleKeyPress}
-            onChange={handleInputChange}
-            onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
-
-            name="message"
-            placeholder={!isListening ? "Ask me anything" : "Listening"}          
-            className="max-h-40 px-6 pt-6 border-0 shadow-none bg-accent rounded-lg text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed dark:bg-card"
-          />
-          
-          {!input && !isListening}
+          <div className="relative w-full flex flex-col">
+            <TextareaAutosize
+              ref={inputRef}
+              tabIndex={0}
+              onKeyDown={handleInputKeyDown}
+              value={input}
+              onChange={handleInputChangeWithCommands}
+              onClick={() => setCommandMenuOpen(false)}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              name="message"
+              placeholder={!isListening ? "Ask me anything" : "Listening"}
+              className="max-h-40 px-6 pt-6 border-0 shadow-none bg-accent rounded-lg text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed dark:bg-card"
+            />
+            
+            {commandMenuOpen && (
+              <div 
+                className="absolute z-50 bg-popover border rounded-md shadow-md overflow-hidden"
+                style={{ 
+                  bottom: '100%',  // Position at the bottom of the container
+                  marginBottom: '8px', // Add some spacing
+                  left: '20px', // Match the padding of the input
+                  width: '240px' // Fixed width
+                }}
+              >
+                {/* <div className="py-1.5 px-2 font-medium text-xs border-b"></div> */}
+                <div className="max-h-[150px] overflow-y-auto">
+                  {commands.map((command) => (
+                    <div
+                      key={command.id}
+                      className="flex items-center px-2 py-1.5 text-sm hover:bg-accent rounded-sm cursor-pointer"
+                      onClick={() => handleCommandSelect(command.id)}
+                    >
+                      <Command className="mr-2 h-3.5 w-3.5" />
+                      <span className="font-medium">{command.label}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{command.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex w-full items-center p-2">
             {isLoading ? (
