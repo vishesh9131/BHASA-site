@@ -61,6 +61,8 @@ export default function ChatBottombar({
   const [commands] = useState([
     { id: 'hindi', label: 'Hindi', description: 'Translate response to Hindi', suffix: 'translate in hindi' },
     { id: 'logic', label: 'Logic', description: 'Provide logical analysis', suffix: 'analyze this logically' },
+    { id: 'observe', label: 'Observe', description: 'explain it like vishesh', suffix: 'explain in Simlest form' },
+
   ]);
   const [commandPosition, setCommandPosition] = useState({ x: 0, y: 0 });
   const [selectedCommand, setSelectedCommand] = useState<string | null>(null);
@@ -117,14 +119,31 @@ export default function ChatBottombar({
   const handleCommandSelect = (commandId: string) => {
     const command = commands.find(cmd => cmd.id === commandId);
     if (command) {
+      setInput(`/${command.id} `);
       setSelectedCommand(command.suffix);
-      setInput("");
+      setCommandMenuOpen(false);
+      
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 0);
     }
-    setCommandMenuOpen(false);
   };
 
   const handleInputChangeWithCommands = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
+    
+    // If we have a selected command, ensure we maintain the command prefix
+    if (selectedCommand && !value.startsWith('/')) {
+      // User accidentally deleted the command prefix, restore it
+      const commandId = commands.find(cmd => cmd.suffix === selectedCommand)?.id;
+      if (commandId) {
+        setInput(`/${commandId} ${value}`);
+        return;
+      }
+    }
+    
     handleInputChange(e);
     
     if (value === '/') {
@@ -132,7 +151,6 @@ export default function ChatBottombar({
       const lineHeight = parseInt(getComputedStyle(e.target).lineHeight) || 20;
       
       const cursorX = textAreaRect.left + 20; 
-      
       const cursorY = textAreaRect.top + 10;
       
       setCommandPosition({ x: cursorX, y: cursorY });
@@ -162,15 +180,29 @@ export default function ChatBottombar({
     e.preventDefault();
     
     if (selectedCommand) {
-      const originalInput = input;
-      const finalInput = `${originalInput} ${selectedCommand}`;
+      const commandRegex = /^\/\w+\s+(.*)$/;
+      const match = input.match(commandRegex);
+      const userMessage = match ? match[1] : input;
       
-      setInput(finalInput);
+      // For Hindi translation, use a more effective prompt
+      if (selectedCommand === 'translate in hindi') {
+        // This is a stronger instruction for Hindi translation
+        const finalInput = `मेरे सवाल का हिंदी में जवाब दें: ${userMessage}`;
+        handleSubmit(e, finalInput);
+      } else if (selectedCommand === 'analyze this logically') {
+        const finalInput = `Analyze the following logically and provide a step-by-step breakdown: "${userMessage}"`;
+        handleSubmit(e, finalInput);
+      } else if (selectedCommand === 'explain in Simlest form') {
+        const finalInput = `Explain the following text in the simplest form which after getting feels like common sense , also give a real life example : "${userMessage}"`;
+        handleSubmit(e, finalInput);
+      } else {
+        // For any other commands
+        const finalInput = `${userMessage} ${selectedCommand}`;
+        handleSubmit(e, finalInput);
+      }
       
-      setTimeout(() => {
-        handleSubmit(e);
-        setSelectedCommand(null);
-      }, 0);
+      // Reset the selected command
+      setSelectedCommand(null);
     } else {
       handleSubmit(e);
     }
@@ -207,31 +239,45 @@ export default function ChatBottombar({
           className="w-full items-center flex flex-col  bg-accent dark:bg-card rounded-lg "
         >
           <div className="relative w-full flex flex-col">
-            <TextareaAutosize
-              ref={inputRef}
-              tabIndex={0}
-              onKeyDown={handleInputKeyDown}
-              value={input}
-              onChange={handleInputChangeWithCommands}
-              onClick={() => setCommandMenuOpen(false)}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-              name="message"
-              placeholder={!isListening ? "Ask me anything" : "Listening"}
-              className="max-h-40 px-6 pt-6 border-0 shadow-none bg-accent rounded-lg text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed dark:bg-card"
-            />
+            <div className="flex items-center w-full bg-accent dark:bg-card rounded-lg overflow-hidden">
+              {selectedCommand && (
+                <div className="inline-flex h-full items-center pl-3 shrink-0">
+                  <span className="inline-flex items-center bg-gray-500/15 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs font-medium border border-gray-300/20 dark:border-gray-600/20 mr-1">
+                    {input.startsWith('/') ? input.split(' ')[0] : `/${commands.find(cmd => cmd.suffix === selectedCommand)?.id || ''}`}
+                  </span>
+                </div>
+              )}
+              <TextareaAutosize
+                ref={inputRef}
+                tabIndex={0}
+                onKeyDown={handleInputKeyDown}
+                value={selectedCommand ? input.replace(/^\/\w+\s/, '') : input}
+                onChange={handleInputChangeWithCommands}
+                onClick={() => setCommandMenuOpen(false)}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+                name="message"
+                placeholder={!isListening ? "Ask me anything" : "Listening"}
+                minRows={1}
+                className="resize-none border-0 w-full shadow-none bg-accent rounded-lg text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed dark:bg-card"
+                style={{ 
+                  padding: '16px',
+                  paddingLeft: selectedCommand ? '6px' : '16px',
+                  overflow: 'hidden'
+                }}
+              />
+            </div>
             
             {commandMenuOpen && (
               <div 
                 className="absolute z-50 bg-popover border rounded-md shadow-md overflow-hidden"
                 style={{ 
-                  bottom: '100%',  // Position at the bottom of the container
-                  marginBottom: '8px', // Add some spacing
-                  left: '20px', // Match the padding of the input
-                  width: '240px' // Fixed width
+                  bottom: '100%',
+                  marginBottom: '8px',
+                  left: '20px',
+                  width: '240px'
                 }}
               >
-                {/* <div className="py-1.5 px-2 font-medium text-xs border-b"></div> */}
                 <div className="max-h-[150px] overflow-y-auto">
                   {commands.map((command) => (
                     <div
