@@ -182,30 +182,36 @@ export default function ChatBottombar({
     if (selectedCommand) {
       const commandRegex = /^\/\w+\s+(.*)$/;
       const match = input.match(commandRegex);
-      const userMessage = match ? match[1] : input;
+      const userMessage = match ? match[1] : input.replace(/^\/\w+\s*/, '');
       
-      // For Hindi translation, use a more effective prompt
+      let effectiveCommand = '';
+      
       if (selectedCommand === 'translate in hindi') {
-        // This is a stronger instruction for Hindi translation
-        const finalInput = `मेरे सवाल का हिंदी में जवाब दें: ${userMessage}`;
-        handleSubmit(e, finalInput);
+        effectiveCommand = `[SYSTEM: Respond in Hindi language only]\n\nTranslate to Hindi: ${userMessage}`;
       } else if (selectedCommand === 'analyze this logically') {
-        const finalInput = `Analyze the following logically and provide a step-by-step breakdown: "${userMessage}"`;
-        handleSubmit(e, finalInput);
+        effectiveCommand = `Analyze the following logically and provide a step-by-step breakdown: "${userMessage}"`;
       } else if (selectedCommand === 'explain in Simlest form') {
-        const finalInput = `Explain the following text in the simplest form which after getting feels like common sense , also give a real life example : "${userMessage}"`;
-        handleSubmit(e, finalInput);
+        effectiveCommand = `Explain the following text in the simplest form which after getting feels like common sense, also give a real life example: "${userMessage}"`;
       } else {
-        // For any other commands
-        const finalInput = `${userMessage} ${selectedCommand}`;
-        handleSubmit(e, finalInput);
+        effectiveCommand = `${userMessage} ${selectedCommand}`;
       }
       
-      // Reset the selected command
+      // Directly create and dispatch a custom event with the processed command
+      const customEvent = new CustomEvent('sendProcessedCommand', { 
+        detail: { command: effectiveCommand }
+      });
+      document.dispatchEvent(customEvent);
+      
+      // Reset command state
       setSelectedCommand(null);
-    } else {
-      handleSubmit(e);
+      setInput('');
+      
+      // Prevent default form submission since we're handling it manually
+      return;
     }
+    
+    // No command, proceed with normal submission
+    handleSubmit(e);
   };
 
   useEffect(() => {
@@ -230,6 +236,33 @@ export default function ChatBottombar({
       // You might want to set a default model here if needed
     }
   }, [selectedModel]);
+
+  useEffect(() => {
+    const handleProcessedCommand = (e: CustomEvent) => {
+      const command = e.detail.command;
+      console.log('Processing special command:', command);
+      
+      // Force the input to be the command
+      setInput(command);
+      
+      // Submit after ensuring input is updated
+      setTimeout(() => {
+        // Create a synthetic form event for submission
+        const formEvent = new Event('submit', { bubbles: true, cancelable: true });
+        const form = document.querySelector('form');
+        if (form) {
+          form.dispatchEvent(formEvent);
+        }
+      }, 50);
+    };
+    
+    // TypeScript needs help with custom events
+    document.addEventListener('sendProcessedCommand', handleProcessedCommand as EventListener);
+    
+    return () => {
+      document.removeEventListener('sendProcessedCommand', handleProcessedCommand as EventListener);
+    };
+  }, []);
 
   return (
     <div className="px-4 pb-7 flex justify-between w-full items-center relative ">

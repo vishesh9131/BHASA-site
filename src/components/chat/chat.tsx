@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import React from "react";
 import ChatTopbar from "./chat-topbar";
@@ -48,6 +48,17 @@ export default function Chat({ initialMessages, id }: ChatProps) {
     open,
     setOpen,
   } = useChat({ id, initialMessages });
+
+  const sendMessageToModel = async (message: string) => {
+    // Check if this is a command that needs special processing
+    if (message.includes('[SYSTEM: Respond in Hindi language only]')) {
+      console.log('Handling Hindi translation command');
+      // Ensure the special instruction reaches the model
+    }
+    
+    // Continue with normal model call
+    // ...
+  };
 
   return (
     <div className="flex flex-col justify-between w-full max-w-3xl h-full">
