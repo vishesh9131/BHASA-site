@@ -10,8 +10,8 @@ import AdFlash from '@/components/AdFlash';
 import CreditsModal from '@/components/CreditsModal';
 
 const metainfo = {
-  name: "Chatty",
-  title: "Chatty",
+  name: "Bhasa",
+  title: "Bhasa-chat",
   description: "Chat with web-llm models in the browser",
   url: "https://chattyui.com",
   icons: {
@@ -29,13 +29,10 @@ export const metadata: Metadata = {
   description: metainfo.description,
   authors: [
     {
-      name: "Jakob Hoeg Mørk",
-      url: "https://jakobhoeg.dev",
+      name: "Vishesh Yadav",
+      url: "https://corerec.tech",
     },
-    {
-      name: "Addy Osmani",
-      url: "https://addyosmani.com",
-    },
+
   ],
   openGraph: {
     type: "website",
