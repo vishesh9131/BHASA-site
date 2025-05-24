@@ -1,4 +1,5 @@
 // Helper for BHASA-Gem (Gemini) API
+import { ChatCallbacks } from './web-llm-helper';
 
 export class GeminiHelper {
   private apiUrl: string = 'http://localhost:8001/api/gemini/generate';
@@ -24,7 +25,18 @@ export class GeminiHelper {
       });
       
       if (!response.ok) {
-        throw new Error('Gemini API request failed');
+        const errorData = await response.json().catch(() => ({}));
+        let errorMessage = 'Gemini API request failed';
+        
+        if (response.status === 429) {
+          errorMessage = 'Gemini API quota exceeded. Please check your API key and billing details.';
+        } else if (response.status === 401) {
+          errorMessage = 'Invalid Gemini API key. Please check your API key configuration.';
+        } else if (response.status === 500) {
+          errorMessage = errorData.error || 'Server error occurred while processing your request.';
+        }
+        
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();

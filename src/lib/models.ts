@@ -1,5 +1,5 @@
 export enum ModelGroup {
-  CUSTOM = "Custom Models",
+  CUSTOM = "Bhasa Models",
   QWEN = 'Qwen',
   LLAMA = 'Llama',
   MISTRAL = 'Mistral',
